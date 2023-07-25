@@ -2101,6 +2101,9 @@ minio:
   rootPassword: supersecret
   # Changed the mc config path to '/tmp' from '/etc' as '/etc' is only writable by root and OpenShift will not permit this.
   configPathmc: "/tmp/minio/mc/"
+  makeBucketJob:
+    Annotations: { sidecar.istio.io/inject: "false" }
+    podAnnotations: { sidecar.istio.io/inject: "false" }
 
 # -- DEPRECATED: use the 'gateway' section instead. For a migration guide refer to
 # https://grafana.com/docs/helm-charts/mimir-distributed/latest/migration-guides/migrate-to-unified-proxy-deployment/
