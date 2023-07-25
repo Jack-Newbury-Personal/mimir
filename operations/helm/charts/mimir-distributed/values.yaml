@@ -2109,7 +2109,7 @@ minio:
 # Can only be enabled when 'enterprise.enabled' is false.
 nginx:
   # -- Specifies whether nginx should be enabled
-  enabled: false
+  enabled: true
   # -- Number of replicas for nginx
   replicas: 1
   # -- Enable logging of 2xx and 3xx HTTP requests
@@ -2445,7 +2445,7 @@ nginx:
 gateway:
   # -- The gateway is deployed by default for enterprise installations (enterprise.enabled=true).
   # Toggle this to have it deployed for non-enterprise installations too.
-  enabledNonEnterprise: true
+  enabledNonEnterprise: false
 
   # -- Number of replicas for the Deployment
   replicas: 1
@@ -2558,7 +2558,7 @@ gateway:
     nameOverride: ""
 
   ingress:
-    enabled: true
+    enabled: false
     # -- Overrides the name of the Ingress. Useful if you are switching from the deprecated nginx or
     # GEM gateway configuration and you Ingress Controller needs time to reconcile a new Ingress resource.
     # By using the same name as the nginx/GEM gateway Ingress, Helm will not delete the Ingress Resource.
