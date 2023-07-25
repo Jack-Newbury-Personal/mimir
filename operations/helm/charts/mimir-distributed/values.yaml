@@ -2294,6 +2294,7 @@ nginx:
       error_log  /dev/stderr {{ .Values.nginx.nginxConfig.errorLogLevel }};
       pid        /tmp/nginx.pid;
       worker_rlimit_nofile 8192;
+      proxy_http_version 1.1;
 
       events {
         worker_connections  4096;  ## Default: 1024
