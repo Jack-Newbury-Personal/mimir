@@ -2792,7 +2792,7 @@ metaMonitoring:
   # ServiceMonitor configuration for monitoring Kubernetes Services with Prometheus Operator and/or Grafana Agent
   serviceMonitor:
     # -- If enabled, ServiceMonitor resources for Prometheus Operator are created
-    enabled: false
+    enabled: true
     # -- To disable setting a 'cluster' label in metrics, set to 'null'.
     # To overwrite the 'cluster' label with your own value, set to a non-empty string.
     # Keep empty string "" to have the default value in the 'cluster' label, which is the helm release name for Mimir and the actual cluster name for Enterprise Metrics.
@@ -2863,29 +2863,29 @@ metaMonitoring:
     # -- Controls whether to create PodLogs, MetricsInstance, LogsInstance, and GrafanaAgent CRs to scrape the
     # ServiceMonitors of the chart and ship metrics and logs to the remote endpoints below.
     # Note that you need to configure serviceMonitor in order to have some metrics available.
-    enabled: false
+    enabled: true
 
     # -- Controls the image repository and tag for config-reloader and grafana-agent containers in the meta-monitoring
     # StatefulSet and DaemonSet created by the grafana-agent-operator. You can define one or both sections under imageRepo.
     # If a section is defined, you must pass repo, image and tag keys.
     imageRepo:
-    #  configReloader:
-    #    repo: quay.io
-    #    image: prometheus-operator/prometheus-config-reloader
-    #    tag: v0.47.0
-    #  grafanaAgent:
-    #    repo: docker.io
-    #    image: grafana/agent
-    #    tag: v0.29.0
+      configReloader:
+        repo: quay.io
+        image: prometheus-operator/prometheus-config-reloader
+        tag: v0.47.0
+      grafanaAgent:
+        repo: docker.io
+        image: grafana/agent
+        tag: v0.29.0
 
     # -- Controls whether to install the Grafana Agent Operator and its CRDs.
     # Note that helm will not install CRDs if this flag is enabled during an upgrade.
     # In that case install the CRDs manually from https://github.com/grafana/agent/tree/main/production/operator/crds
-    installOperator: false
+    installOperator: true
 
     logs:
       # -- Controls whether to create resources PodLogs and LogsInstance resources
-      enabled: true
+      enabled: false
 
       # -- Default destination for logs. The config here is translated to Promtail client
       # configuration to write logs to this Loki-compatible remote. Optional.
@@ -2943,7 +2943,7 @@ metaMonitoring:
         # -- Full URL for Prometheus remote-write. Usually ends in /push.
         # If you leave the url field empty, then the chart automatically fills in the
         # address of the GEM gateway Service or the Mimir NGINX Service.
-        url: ""
+        url: "mimir-distributor/api/v1/push"
 
         # -- Used to add HTTP headers to remote-write requests.
         headers: {}
@@ -2975,7 +2975,7 @@ metaMonitoring:
       scrapeInterval: 60s
 
     # -- Sets the namespace of the resources. Leave empty or unset to use the same namespace as the Helm release.
-    namespace: ""
+    namespace: "monitoring"
 
     # -- Labels to add to all monitoring.grafana.com custom resources.
     # Does not affect the ServiceMonitors for kubernetes metrics; use serviceMonitor.labels for that.
