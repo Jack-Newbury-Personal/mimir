@@ -31,6 +31,7 @@ spec:
       annotations:
 {{ toYaml .Values.minio.makeBucketJob.podAnnotations | indent 8 }}
 {{- end }}
+      sidecar.istio.io/inject: "false"
     spec:
       restartPolicy: OnFailure
 {{- include "minio.imagePullSecrets" . | indent 6 }}
