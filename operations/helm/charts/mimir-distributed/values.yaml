@@ -2943,7 +2943,7 @@ metaMonitoring:
         # -- Full URL for Prometheus remote-write. Usually ends in /push.
         # If you leave the url field empty, then the chart automatically fills in the
         # address of the GEM gateway Service or the Mimir NGINX Service.
-        url: "mimir-distributor/api/v1/push"
+        url: ""
 
         # -- Used to add HTTP headers to remote-write requests.
         headers: {}
