@@ -1409,7 +1409,7 @@ store_gateway:
 
     # Store-gateway data Persistent Volume size
     #
-    size: 100Gi
+    size: 10Gi
 
     # Subdirectory of Store-gateway data Persistent Volume to mount
     # Useful if the volume's root directory is not empty
@@ -2093,7 +2093,7 @@ minio:
       policy: none
       purge: false
   persistence:
-    size: 10Gi
+    size: 100Gi
   resources:
     requests:
       cpu: 100m
