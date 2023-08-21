@@ -13,13 +13,13 @@ import (
 	"time"
 
 	"github.com/go-kit/log/level"
+	"github.com/grafana/dskit/instrument"
 	"github.com/grafana/dskit/ring"
 	"github.com/grafana/dskit/tenant"
 	"github.com/opentracing/opentracing-go"
 	"github.com/pkg/errors"
 	"github.com/prometheus/common/model"
 	"github.com/prometheus/prometheus/model/labels"
-	"github.com/weaveworks/common/instrument"
 	"golang.org/x/exp/slices"
 
 	ingester_client "github.com/grafana/mimir/pkg/ingester/client"
@@ -318,7 +318,7 @@ func (d *Distributor) queryIngesterStream(ctx context.Context, replicationSet ri
 		}
 	}
 
-	results, err := ring.DoUntilQuorumWithoutSuccessfulContextCancellation(ctx, replicationSet, d.queryQuorumConfig, queryIngester, cleanup)
+	results, err := ring.DoUntilQuorumWithoutSuccessfulContextCancellation(ctx, replicationSet, d.queryQuorumConfig(ctx), queryIngester, cleanup)
 	if err != nil {
 		return ingester_client.CombinedQueryStreamResponse{}, err
 	}

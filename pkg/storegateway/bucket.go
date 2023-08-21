@@ -25,6 +25,7 @@ import (
 	"github.com/grafana/dskit/multierror"
 	"github.com/grafana/dskit/runutil"
 	"github.com/oklog/ulid"
+	"github.com/opentracing/opentracing-go"
 	"github.com/pkg/errors"
 	"github.com/prometheus/prometheus/model/labels"
 	"github.com/prometheus/prometheus/storage"
@@ -33,7 +34,6 @@ import (
 	"github.com/prometheus/prometheus/tsdb/hashcache"
 	"github.com/prometheus/prometheus/tsdb/index"
 	"github.com/thanos-io/objstore"
-	"github.com/thanos-io/objstore/tracing"
 	"golang.org/x/exp/slices"
 	"golang.org/x/sync/errgroup"
 	"google.golang.org/grpc"
@@ -42,6 +42,7 @@ import (
 
 	"github.com/grafana/mimir/pkg/mimirpb"
 	"github.com/grafana/mimir/pkg/storage/sharding"
+	"github.com/grafana/mimir/pkg/storage/tsdb"
 	"github.com/grafana/mimir/pkg/storage/tsdb/block"
 	"github.com/grafana/mimir/pkg/storage/tsdb/bucketcache"
 	"github.com/grafana/mimir/pkg/storegateway/chunkscache"
@@ -227,17 +228,11 @@ func NewBucketStore(
 	bkt objstore.InstrumentedBucketReader,
 	fetcher block.MetadataFetcher,
 	dir string,
-	maxSeriesPerBatch int,
-	numChunksRangesPerSeries int,
+	bucketStoreConfig tsdb.BucketStoreConfig,
 	postingsStrategy postingsSelectionStrategy,
 	chunksLimiterFactory ChunksLimiterFactory,
 	seriesLimiterFactory SeriesLimiterFactory,
 	partitioners blockPartitioners,
-	blockSyncConcurrency int,
-	postingOffsetsInMemSampling int,
-	indexHeaderCfg indexheader.Config,
-	lazyIndexReaderEnabled bool,
-	lazyIndexReaderIdleTimeout time.Duration,
 	seriesHashCache *hashcache.SeriesHashCache,
 	metrics *BucketStoreMetrics,
 	options ...BucketStoreOption,
@@ -251,19 +246,19 @@ func NewBucketStore(
 		chunksCache:                 chunkscache.NoopCache{},
 		blocks:                      map[ulid.ULID]*bucketBlock{},
 		blockSet:                    newBucketBlockSet(),
-		blockSyncConcurrency:        blockSyncConcurrency,
+		blockSyncConcurrency:        bucketStoreConfig.BlockSyncConcurrency,
 		queryGate:                   gate.NewNoop(),
 		lazyLoadingGate:             gate.NewNoop(),
 		chunksLimiterFactory:        chunksLimiterFactory,
 		seriesLimiterFactory:        seriesLimiterFactory,
 		partitioners:                partitioners,
-		postingOffsetsInMemSampling: postingOffsetsInMemSampling,
-		indexHeaderCfg:              indexHeaderCfg,
+		postingOffsetsInMemSampling: bucketStoreConfig.PostingOffsetsInMemSampling,
+		indexHeaderCfg:              bucketStoreConfig.IndexHeader,
 		seriesHashCache:             seriesHashCache,
 		metrics:                     metrics,
 		userID:                      userID,
-		maxSeriesPerBatch:           maxSeriesPerBatch,
-		numChunksRangesPerSeries:    numChunksRangesPerSeries,
+		maxSeriesPerBatch:           bucketStoreConfig.StreamingBatchSize,
+		numChunksRangesPerSeries:    bucketStoreConfig.ChunkRangesPerSeries,
 		postingsStrategy:            postingsStrategy,
 	}
 
@@ -271,8 +266,13 @@ func NewBucketStore(
 		option(s)
 	}
 
+	lazyLoadedSnapshotConfig := indexheader.LazyLoadedHeadersSnapshotConfig{
+		Path:                dir,
+		UserID:              userID,
+		EagerLoadingEnabled: bucketStoreConfig.IndexHeader.IndexHeaderEagerLoadingStartupEnabled,
+	}
 	// Depend on the options
-	s.indexReaderPool = indexheader.NewReaderPool(s.logger, lazyIndexReaderEnabled, lazyIndexReaderIdleTimeout, s.lazyLoadingGate, metrics.indexHeaderReaderMetrics)
+	s.indexReaderPool = indexheader.NewReaderPool(s.logger, bucketStoreConfig.IndexHeaderLazyLoadingEnabled, bucketStoreConfig.IndexHeaderLazyLoadingIdleTimeout, bucketStoreConfig.IndexHeaderSparsePersistenceEnabled, s.lazyLoadingGate, metrics.indexHeaderReaderMetrics, lazyLoadedSnapshotConfig)
 
 	if err := os.MkdirAll(dir, 0750); err != nil {
 		return nil, errors.Wrap(err, "create dir")
@@ -305,6 +305,10 @@ func (s *BucketStore) Stats() BucketStoreStats {
 // SyncBlocks synchronizes the stores state with the Bucket bucket.
 // It will reuse disk space as persistent cache based on s.dir param.
 func (s *BucketStore) SyncBlocks(ctx context.Context) error {
+	return s.syncBlocks(ctx, false)
+}
+
+func (s *BucketStore) syncBlocks(ctx context.Context, initialSync bool) error {
 	metas, _, metaFetchErr := s.fetcher.Fetch(ctx)
 	// For partial view allow adding new blocks at least.
 	if metaFetchErr != nil && metas == nil {
@@ -318,7 +322,7 @@ func (s *BucketStore) SyncBlocks(ctx context.Context) error {
 		wg.Add(1)
 		go func() {
 			for meta := range blockc {
-				if err := s.addBlock(ctx, meta); err != nil {
+				if err := s.addBlock(ctx, meta, initialSync); err != nil {
 					continue
 				}
 			}
@@ -360,7 +364,7 @@ func (s *BucketStore) SyncBlocks(ctx context.Context) error {
 // InitialSync perform blocking sync with extra step at the end to delete locally saved blocks that are no longer
 // present in the bucket. The mismatch of these can only happen between restarts, so we can do that only once per startup.
 func (s *BucketStore) InitialSync(ctx context.Context) error {
-	if err := s.SyncBlocks(ctx); err != nil {
+	if err := s.syncBlocks(ctx, true); err != nil {
 		return errors.Wrap(err, "sync block")
 	}
 
@@ -396,7 +400,7 @@ func (s *BucketStore) getBlock(id ulid.ULID) *bucketBlock {
 	return s.blocks[id]
 }
 
-func (s *BucketStore) addBlock(ctx context.Context, meta *block.Meta) (err error) {
+func (s *BucketStore) addBlock(ctx context.Context, meta *block.Meta, initialSync bool) (err error) {
 	dir := filepath.Join(s.dir, meta.ULID.String())
 	start := time.Now()
 
@@ -422,6 +426,7 @@ func (s *BucketStore) addBlock(ctx context.Context, meta *block.Meta) (err error
 		meta.ULID,
 		s.postingOffsetsInMemSampling,
 		s.indexHeaderCfg,
+		initialSync,
 	)
 	if err != nil {
 		return errors.Wrap(err, "create index header reader")
@@ -611,9 +616,9 @@ func (s *BucketStore) Series(req *storepb.SeriesRequest, srv storepb.Store_Serie
 
 	// Wait for the query gate only after opening blocks. Opening blocks is usually fast (~1ms),
 	// but sometimes it can take minutes if the block isn't loaded and there is a surge in queries for unloaded blocks.
-	tracing.DoWithSpan(ctx, "store_query_gate_ismyturn", func(ctx context.Context, _ tracing.Span) {
-		err = s.queryGate.Start(ctx)
-	})
+	span, spanCtx := opentracing.StartSpanFromContext(ctx, "store_query_gate_ismyturn")
+	err = s.queryGate.Start(spanCtx)
+	span.Finish()
 	if err != nil {
 		return errors.Wrapf(err, "failed to wait for turn")
 	}
@@ -1252,7 +1257,7 @@ func (s *BucketStore) recordSeriesHashCacheStats(stats *queryStats) {
 
 func (s *BucketStore) openBlocksForReading(ctx context.Context, skipChunks bool, minT, maxT int64, blockMatchers []*labels.Matcher, stats *safeQueryStats) ([]*bucketBlock, map[ulid.ULID]*bucketIndexReader, map[ulid.ULID]chunkReader) {
 	// ignore the span context so that we can use the context for cancellation
-	span, _ := tracing.StartSpan(ctx, "bucket_store_open_blocks_for_reading")
+	span, _ := opentracing.StartSpanFromContext(ctx, "bucket_store_open_blocks_for_reading")
 	defer span.Finish()
 
 	s.blocksMx.RLock()

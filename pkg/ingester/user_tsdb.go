@@ -18,6 +18,7 @@ import (
 	"github.com/prometheus/prometheus/model/labels"
 	"github.com/prometheus/prometheus/storage"
 	"github.com/prometheus/prometheus/tsdb"
+	"github.com/prometheus/prometheus/tsdb/chunks"
 	"go.uber.org/atomic"
 
 	"github.com/grafana/mimir/pkg/ingester/activeseries"
@@ -299,17 +300,19 @@ func (u *userTSDB) PostCreation(metric labels.Labels) {
 	u.seriesInMetric.increaseSeriesForMetric(metricName)
 }
 
-func (u *userTSDB) PostDeletion(metrics ...labels.Labels) {
+func (u *userTSDB) PostDeletion(metrics map[chunks.HeadSeriesRef]labels.Labels) {
 	u.instanceSeriesCount.Sub(int64(len(metrics)))
 
-	for _, metric := range metrics {
-		metricName, err := extract.MetricNameFromLabels(metric)
+	for _, lbls := range metrics {
+		metricName, err := extract.MetricNameFromLabels(lbls)
 		if err != nil {
 			// This should never happen because it has already been checked in PreCreation().
 			continue
 		}
 		u.seriesInMetric.decreaseSeriesForMetric(metricName)
 	}
+
+	u.activeSeries.PostDeletion(metrics)
 }
 
 // blocksToDelete filters the input blocks and returns the blocks which are safe to be deleted from the ingester.
@@ -389,13 +392,15 @@ func (u *userTSDB) getOldestUnshippedBlockTime() uint64 {
 }
 
 func (u *userTSDB) isIdle(now time.Time, idle time.Duration) bool {
-	lu := u.lastUpdate.Load()
-
-	return time.Unix(lu, 0).Add(idle).Before(now)
+	return u.getLastUpdate().Add(idle).Before(now)
 }
 
 func (u *userTSDB) setLastUpdate(t time.Time) {
-	u.lastUpdate.Store(t.Unix())
+	u.lastUpdate.Store(t.UnixMilli())
+}
+
+func (u *userTSDB) getLastUpdate() time.Time {
+	return time.UnixMilli(u.lastUpdate.Load())
 }
 
 // Checks if TSDB can be closed.

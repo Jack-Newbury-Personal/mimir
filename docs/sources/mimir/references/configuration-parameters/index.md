@@ -116,7 +116,7 @@ where `default_value` is the value to use if the environment variable is undefin
 # CLI flag: -auth.no-auth-tenant
 [no_auth_tenant: <string> | default = "anonymous"]
 
-# (experimental) How long to wait between SIGTERM and shutdown. After receiving
+# (advanced) How long to wait between SIGTERM and shutdown. After receiving
 # SIGTERM, Mimir will report not-ready status via /ready endpoint.
 # CLI flag: -shutdown-delay
 [shutdown_delay: <duration> | default = 0s]
@@ -366,6 +366,10 @@ overrides_exporter:
 # The common block holds configurations that configure multiple components at a
 # time.
 [common: <common>]
+
+# (experimental) Enables optimized marshaling of timeseries.
+# CLI flag: -timeseries-unmarshal-caching-optimization-enabled
+[timeseries_unmarshal_caching_optimization_enabled: <boolean> | default = true]
 ```
 
 ### common
@@ -453,6 +457,16 @@ The `server` block configures the HTTP and gRPC server of the launched service(s
 [tls_min_version: <string> | default = ""]
 
 http_tls_config:
+  # Server TLS certificate. This configuration parameter is YAML only.
+  [cert: <string> | default = ""]
+
+  # Server TLS key. This configuration parameter is YAML only.
+  [key: <string> | default = ""]
+
+  # Root certificate authority used to verify client certificates. This
+  # configuration parameter is YAML only.
+  [client_ca: <string> | default = ""]
+
   # (advanced) HTTP server cert path.
   # CLI flag: -server.http-tls-cert-path
   [cert_file: <string> | default = ""]
@@ -470,6 +484,16 @@ http_tls_config:
   [client_ca_file: <string> | default = ""]
 
 grpc_tls_config:
+  # Server TLS certificate. This configuration parameter is YAML only.
+  [cert: <string> | default = ""]
+
+  # Server TLS key. This configuration parameter is YAML only.
+  [key: <string> | default = ""]
+
+  # Root certificate authority used to verify client certificates. This
+  # configuration parameter is YAML only.
+  [client_ca: <string> | default = ""]
+
   # (advanced) GRPC TLS server cert path.
   # CLI flag: -server.grpc-tls-cert-path
   [cert_file: <string> | default = ""]
@@ -777,6 +801,10 @@ instance_limits:
   # per-tenant. Additional requests will be rejected. 0 = unlimited.
   # CLI flag: -distributor.instance-limits.max-inflight-push-requests-bytes
   [max_inflight_push_requests_bytes: <int> | default = 0]
+
+# (experimental) Enable pooling of buffers used for marshaling write requests.
+# CLI flag: -distributor.write-requests-buffer-pooling-enabled
+[write_requests_buffer_pooling_enabled: <boolean> | default = true]
 ```
 
 ### ingester
@@ -2708,10 +2736,11 @@ The `limits` block configures default and per-tenant limits imposed by component
 # CLI flag: -validation.max-native-histogram-buckets
 [max_native_histogram_buckets: <int> | default = 0]
 
-# (advanced) Controls how far into the future incoming samples are accepted
-# compared to the wall clock. Any sample with timestamp `t` will be rejected if
-# `t > (now + validation.create-grace-period)`. Also used by query-frontend to
-# avoid querying too far into the future. 0 to disable.
+# (advanced) Controls how far into the future incoming samples and exemplars are
+# accepted compared to the wall clock. Any sample or exemplar will be rejected
+# if its timestamp is greater than '(now + grace_period)'. This configuration is
+# enforced in the distributor, ingester and query-frontend (to avoid querying
+# too far into the future).
 # CLI flag: -validation.create-grace-period
 [creation_grace_period: <duration> | default = 10m]
 
@@ -2732,6 +2761,12 @@ The `limits` block configures default and per-tenant limits imposed by component
 # Prometheus server, e.g. remote_write.write_relabel_configs. Labels available
 # during the relabeling phase and cleaned afterwards: __meta_tenant_id
 [metric_relabel_configs: <relabel_config...> | default = ]
+
+# (experimental) If enabled, rate limit errors will be reported to the client
+# with HTTP status code 529 (Service is overloaded). If disabled, status code
+# 429 (Too Many Requests) is used.
+# CLI flag: -distributor.service-overload-status-code-on-rate-limit-enabled
+[service_overload_status_code_on_rate_limit_enabled: <boolean> | default = false]
 
 # The maximum number of in-memory series per tenant, across the cluster before
 # replication. 0 to disable.
@@ -3394,6 +3429,12 @@ bucket_store:
   # CLI flag: -blocks-storage.bucket-store.index-header-lazy-loading-concurrency
   [index_header_lazy_loading_concurrency: <int> | default = 0]
 
+  # (experimental) If enabled, store-gateway will persist a sparse version of
+  # the index-header to disk on construction and load sparse index-headers from
+  # disk instead of the whole index-header.
+  # CLI flag: -blocks-storage.bucket-store.index-header-sparse-persistence-enabled
+  [index_header_sparse_persistence_enabled: <boolean> | default = false]
+
   # (advanced) Max size - in bytes - of a gap for which the partitioner
   # aggregates together two bucket GET object requests.
   # CLI flag: -blocks-storage.bucket-store.partitioner-max-gap-bytes
@@ -3406,9 +3447,15 @@ bucket_store:
 
   index_header:
     # (advanced) Maximum number of idle file handles the store-gateway keeps
-    # open for each index header file.
+    # open for each index-header file.
     # CLI flag: -blocks-storage.bucket-store.index-header.max-idle-file-handles
     [max_idle_file_handles: <int> | default = 1]
+
+    # (experimental) If enabled, store-gateway will periodically persist block
+    # IDs of lazy loaded index-headers and load them eagerly during startup. It
+    # is not valid to enable this if index-header lazy loading is disabled.
+    # CLI flag: -blocks-storage.bucket-store.index-header.eager-loading-startup-enabled
+    [eager_loading_startup_enabled: <boolean> | default = false]
 
     # (advanced) If true, verify the checksum of index headers upon loading them
     # (either on startup or lazily when lazy loading is enabled). Setting to
@@ -3692,6 +3739,11 @@ The `compactor` block configures the compactor component.
 # CLI flag: -compactor.max-compaction-time
 [max_compaction_time: <duration> | default = 1h]
 
+# (experimental) If enabled, will delete the bucket-index, markers and debug
+# files in the tenant bucket when there are no blocks left in the index.
+# CLI flag: -compactor.no-blocks-file-cleanup-enabled
+[no_blocks_file_cleanup_enabled: <boolean> | default = false]
+
 # (advanced) Number of goroutines opening blocks before compaction.
 # CLI flag: -compactor.max-opening-blocks-concurrency
 [max_opening_blocks_concurrency: <int> | default = 1]
@@ -3887,6 +3939,12 @@ sharding_ring:
   # querier and ruler when running in microservices mode.
   # CLI flag: -store-gateway.sharding-ring.zone-awareness-enabled
   [zone_awareness_enabled: <boolean> | default = false]
+
+  # When enabled, a store-gateway is automatically removed from the ring after
+  # failing to heartbeat the ring for a period longer than 10 times the
+  # configured -store-gateway.sharding-ring.heartbeat-timeout.
+  # CLI flag: -store-gateway.sharding-ring.auto-forget-enabled
+  [auto_forget_enabled: <boolean> | default = true]
 
   # (advanced) Minimum time to wait for ring stability at startup, if set to
   # positive value.
@@ -4111,6 +4169,10 @@ The `redis` block configures the Redis-based caching backend. The supported CLI 
 # CLI flag: -<prefix>.redis.connection-pool-size
 [connection_pool_size: <int> | default = 100]
 
+# (advanced) Maximum duration to wait to get a connection from pool.
+# CLI flag: -<prefix>.redis.connection-pool-timeout
+[connection_pool_timeout: <duration> | default = 4s]
+
 # (advanced) Minimum number of idle connections.
 # CLI flag: -<prefix>.redis.min-idle-connections
 [min_idle_connections: <int> | default = 10]
@@ -4270,6 +4332,12 @@ The s3_backend block configures the connection to Amazon S3 object storage backe
 # INTELLIGENT_TIERING, DEEP_ARCHIVE, OUTPOSTS, GLACIER_IR, SNOW
 # CLI flag: -<prefix>.s3.storage-class
 [storage_class: <string> | default = ""]
+
+# (experimental) If enabled, it will use the default authentication methods of
+# the AWS SDK for go based on known environment variables and known AWS config
+# files.
+# CLI flag: -<prefix>.s3.native-aws-auth-enabled
+[native_aws_auth_enabled: <boolean> | default = false]
 
 sse:
   # Enable AWS Server Side Encryption. Supported values: SSE-KMS, SSE-S3.

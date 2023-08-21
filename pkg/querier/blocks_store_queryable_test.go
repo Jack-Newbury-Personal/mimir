@@ -18,6 +18,7 @@ import (
 	"github.com/go-kit/log"
 	"github.com/gogo/protobuf/types"
 	"github.com/grafana/dskit/services"
+	"github.com/grafana/dskit/user"
 	"github.com/oklog/ulid"
 	"github.com/pkg/errors"
 	"github.com/prometheus/client_golang/prometheus"
@@ -29,7 +30,6 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
-	"github.com/weaveworks/common/user"
 	"golang.org/x/exp/slices"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/metadata"
@@ -1876,7 +1876,6 @@ func TestCanBlockWithCompactorShardIdContainQueryShard(t *testing.T) {
 	const numSeries = 1000
 	const maxShards = 512
 
-	rand.Seed(time.Now().UnixNano())
 	hashes := make([]uint64, numSeries)
 	for ix := 0; ix < numSeries; ix++ {
 		hashes[ix] = rand.Uint64()

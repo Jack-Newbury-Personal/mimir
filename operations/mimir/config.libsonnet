@@ -2,6 +2,7 @@
   _config+: {
     namespace: error 'must define namespace',
     cluster: error 'must define cluster',
+    cluster_domain:: 'cluster.local',
     replication_factor: 3,
     external_url: error 'must define external url for cluster',
 
@@ -145,6 +146,9 @@
     memcached_server_key_path: '/var/secrets/memcached-server-key/',
     memcached_server_cert_path: '/var/secrets/memcached-server-cert/',
 
+    // Number of etcd replicas.
+    etcd_replicas: 3,
+
     // The query-tee is an optional service which can be used to send
     // the same input query to multiple backends and make them compete
     // (comparing performances).
@@ -152,6 +156,9 @@
     query_tee_backend_endpoints: [],
     query_tee_backend_preferred: '',
     query_tee_node_port: null,
+
+    // Common configuration parameters
+    commonConfig:: {},
 
     // usage_stats_enabled enables the reporting of anonymous usage statistics about the Mimir installation.
     // For more details about usage statistics, see:
@@ -209,7 +216,7 @@
       'blocks-storage.bucket-store.sync-dir': '/data/tsdb',
 
       'store-gateway.sharding-ring.store': 'consul',
-      'store-gateway.sharding-ring.consul.hostname': 'consul.%s.svc.cluster.local:8500' % $._config.namespace,
+      'store-gateway.sharding-ring.consul.hostname': 'consul.%(namespace)s.svc.%(cluster_domain)s:8500' % $._config,
       'store-gateway.sharding-ring.prefix': '',
       'store-gateway.sharding-ring.replication-factor': $._config.store_gateway_replication_factor,
     },
@@ -229,7 +236,7 @@
     // The ingester ring client config that should be shared across all Mimir services
     // using or watching the ingester ring.
     ingesterRingClientConfig: {
-      'ingester.ring.consul.hostname': 'consul.%s.svc.cluster.local:8500' % $._config.namespace,
+      'ingester.ring.consul.hostname': 'consul.%(namespace)s.svc.%(cluster_domain)s:8500' % $._config,
       'ingester.ring.replication-factor': $._config.replication_factor,
       'distributor.health-check-ingesters': true,
       'ingester.ring.heartbeat-timeout': '10m',
@@ -239,7 +246,7 @@
 
     local querySchedulerRingConfig = {
       'query-scheduler.ring.store': 'consul',
-      'query-scheduler.ring.consul.hostname': 'consul.%s.svc.cluster.local:8500' % $._config.namespace,
+      'query-scheduler.ring.consul.hostname': 'consul.%(namespace)s.svc.%(cluster_domain)s:8500' % $._config,
       'query-scheduler.ring.prefix': '',
     },
 
@@ -265,7 +272,7 @@
         {
           'overrides-exporter.ring.enabled': true,
           'overrides-exporter.ring.store': 'consul',
-          'overrides-exporter.ring.consul.hostname': 'consul.%s.svc.cluster.local:8500' % $._config.namespace,
+          'overrides-exporter.ring.consul.hostname': 'consul.%(namespace)s.svc.%(cluster_domain)s:8500' % $._config,
           'overrides-exporter.ring.prefix': '',
           'overrides-exporter.ring.wait-stability-min-duration': '1m',
         },
@@ -293,7 +300,7 @@
       replicas: 3,
       fallback_config: {},
       ring_store: 'consul',
-      ring_hostname: 'consul.%s.svc.cluster.local:8500' % $._config.namespace,
+      ring_hostname: 'consul.%(namespace)s.svc.%(cluster_domain)s:8500' % $._config,
       ring_replication_factor: $._config.replication_factor,
     },
 
@@ -578,11 +585,11 @@
 
           'query-frontend.cache-results': true,
           'query-frontend.results-cache.backend': 'memcached',
-          'query-frontend.results-cache.memcached.addresses': 'dnssrvnoa+%(cache_frontend_backend)s-frontend.%(namespace)s.svc.cluster.local:11211' % $._config,
+          'query-frontend.results-cache.memcached.addresses': 'dnssrvnoa+%(cache_frontend_backend)s-frontend.%(namespace)s.svc.%(cluster_domain)s:11211' % $._config,
           'query-frontend.results-cache.memcached.max-item-size': $._config.cache_frontend_max_item_size_mb * 1024 * 1024,
           'query-frontend.results-cache.memcached.timeout': '500ms',
         } + if $._config.memcached_frontend_mtls_enabled then {
-          'query-frontend.results-cache.memcached.addresses': 'dnssrvnoa+%(cache_frontend_backend)s-frontend.%(namespace)s.svc.cluster.local:11212' % $._config,
+          'query-frontend.results-cache.memcached.addresses': 'dnssrvnoa+%(cache_frontend_backend)s-frontend.%(namespace)s.svc.%(cluster_domain)s:11212' % $._config,
           'query-frontend.results-cache.memcached.connect-timeout': '1s',
           'query-frontend.results-cache.memcached.tls-enabled': true,
           'query-frontend.results-cache.memcached.tls-ca-path': $._config.memcached_ca_cert_path + $._config.memcached_mtls_ca_cert_secret + '.pem',
@@ -592,7 +599,7 @@
         } else {}
       ) else if $._config.cache_frontend_backend == 'redis' then {
         'query-frontend.results-cache.backend': 'redis',
-        'query-frontend.results-cache.redis.endpoint': '%(cache_frontend_backend)s-frontend.%(namespace)s.svc.cluster.local:6379' % $._config,
+        'query-frontend.results-cache.redis.endpoint': '%(cache_frontend_backend)s-frontend.%(namespace)s.svc.%(cluster_domain)s:6379' % $._config,
         'query-frontend.results-cache.redis.max-item-size': $._config.cache_frontend_max_item_size_mb * 1024 * 1024,
       } else {}
     else {}
@@ -604,44 +611,60 @@
       // First we will check if index, chunks and metadata cache backend config is equal to Redis
       // then we will enable flag for Redis cache. Otherwise, we assume the cache is Memcached.
       if $._config.cache_index_queries_backend == 'redis' && $._config.cache_chunks_backend == 'redis' && $._config.cache_metadata_backend == 'redis' then
-        {
-          // We use the similar config like memcached in the following else branch for memcached configuration.
-          // the small difference is in redis we set "get" concurrency to connection-poll-size instead of max-idle-connections.
-          'blocks-storage.bucket-store.index-cache.redis.max-get-multi-concurrency': 100,
-          'blocks-storage.bucket-store.chunks-cache.redis.max-get-multi-concurrency': 100,
-          'blocks-storage.bucket-store.metadata-cache.redis.max-get-multi-concurrency': 100,
-          'blocks-storage.bucket-store.index-cache.redis.connection-pool-size':
-            $.store_gateway_args['blocks-storage.bucket-store.index-cache.redis.max-get-multi-concurrency'] +
-            $.store_gateway_args['blocks-storage.bucket-store.index-cache.redis.max-async-concurrency'],
-          'blocks-storage.bucket-store.chunks-cache.redis.connection-pool-size':
-            $.store_gateway_args['blocks-storage.bucket-store.chunks-cache.redis.max-get-multi-concurrency'] +
-            $.store_gateway_args['blocks-storage.bucket-store.chunks-cache.redis.max-async-concurrency'],
-          'blocks-storage.bucket-store.metadata-cache.redis.connection-pool-size':
-            $.store_gateway_args['blocks-storage.bucket-store.metadata-cache.redis.max-get-multi-concurrency'] +
-            $.store_gateway_args['blocks-storage.bucket-store.metadata-cache.redis.max-async-concurrency'],
-        }
+        // We use the similar config like memcached in the following else branch for memcached configuration.
+        // the small difference is in redis we set "get" concurrency to connection-poll-size instead of max-idle-connections.
+        (
+          if !$._config.cache_index_queries_enabled then {} else {
+            'blocks-storage.bucket-store.index-cache.redis.max-get-multi-concurrency': 100,
+            'blocks-storage.bucket-store.index-cache.redis.connection-pool-size':
+              $.store_gateway_args['blocks-storage.bucket-store.index-cache.redis.max-get-multi-concurrency'] +
+              $.store_gateway_args['blocks-storage.bucket-store.index-cache.redis.max-async-concurrency'],
+          }
+        ) + (
+          if !$._config.cache_chunks_enabled then {} else {
+            'blocks-storage.bucket-store.chunks-cache.redis.max-get-multi-concurrency': 100,
+            'blocks-storage.bucket-store.chunks-cache.redis.connection-pool-size':
+              $.store_gateway_args['blocks-storage.bucket-store.chunks-cache.redis.max-get-multi-concurrency'] +
+              $.store_gateway_args['blocks-storage.bucket-store.chunks-cache.redis.max-async-concurrency'],
+          }
+        ) + (
+          if !$._config.cache_metadata_enabled then {} else {
+            'blocks-storage.bucket-store.metadata-cache.redis.max-get-multi-concurrency': 100,
+            'blocks-storage.bucket-store.metadata-cache.redis.connection-pool-size':
+              $.store_gateway_args['blocks-storage.bucket-store.metadata-cache.redis.max-get-multi-concurrency'] +
+              $.store_gateway_args['blocks-storage.bucket-store.metadata-cache.redis.max-async-concurrency'],
+          }
+        )
       else
-        {
-          // We should keep a number of idle connections equal to the max "get" concurrency,
-          // in order to avoid re-opening connections continuously (this would be slower
-          // and fill up the conntrack table too).
-          //
-          // The downside of this approach is that we'll end up with an higher number of
-          // active connections to memcached, so we have to make sure connections limit
-          // set in memcached is high enough.
-          'blocks-storage.bucket-store.index-cache.memcached.max-get-multi-concurrency': 100,
-          'blocks-storage.bucket-store.chunks-cache.memcached.max-get-multi-concurrency': 100,
-          'blocks-storage.bucket-store.metadata-cache.memcached.max-get-multi-concurrency': 100,
-          'blocks-storage.bucket-store.index-cache.memcached.max-idle-connections':
-            $.store_gateway_args['blocks-storage.bucket-store.index-cache.memcached.max-get-multi-concurrency'] +
-            $.store_gateway_args['blocks-storage.bucket-store.index-cache.memcached.max-async-concurrency'],
-          'blocks-storage.bucket-store.chunks-cache.memcached.max-idle-connections':
-            $.store_gateway_args['blocks-storage.bucket-store.chunks-cache.memcached.max-get-multi-concurrency'] +
-            $.store_gateway_args['blocks-storage.bucket-store.chunks-cache.memcached.max-async-concurrency'],
-          'blocks-storage.bucket-store.metadata-cache.memcached.max-idle-connections':
-            $.store_gateway_args['blocks-storage.bucket-store.metadata-cache.memcached.max-get-multi-concurrency'] +
-            $.store_gateway_args['blocks-storage.bucket-store.metadata-cache.memcached.max-async-concurrency'],
-        }
+        // We should keep a number of idle connections equal to the max "get" concurrency,
+        // in order to avoid re-opening connections continuously (this would be slower
+        // and fill up the conntrack table too).
+        //
+        // The downside of this approach is that we'll end up with an higher number of
+        // active connections to memcached, so we have to make sure connections limit
+        // set in memcached is high enough.
+        (
+          if !$._config.cache_index_queries_enabled then {} else {
+            'blocks-storage.bucket-store.index-cache.memcached.max-get-multi-concurrency': 100,
+            'blocks-storage.bucket-store.index-cache.memcached.max-idle-connections':
+              $.store_gateway_args['blocks-storage.bucket-store.index-cache.memcached.max-get-multi-concurrency'] +
+              $.store_gateway_args['blocks-storage.bucket-store.index-cache.memcached.max-async-concurrency'],
+          }
+        ) + (
+          if !$._config.cache_chunks_enabled then {} else {
+            'blocks-storage.bucket-store.chunks-cache.memcached.max-get-multi-concurrency': 100,
+            'blocks-storage.bucket-store.chunks-cache.memcached.max-idle-connections':
+              $.store_gateway_args['blocks-storage.bucket-store.chunks-cache.memcached.max-get-multi-concurrency'] +
+              $.store_gateway_args['blocks-storage.bucket-store.chunks-cache.memcached.max-async-concurrency'],
+          }
+        ) + (
+          if !$._config.cache_metadata_enabled then {} else {
+            'blocks-storage.bucket-store.metadata-cache.memcached.max-get-multi-concurrency': 100,
+            'blocks-storage.bucket-store.metadata-cache.memcached.max-idle-connections':
+              $.store_gateway_args['blocks-storage.bucket-store.metadata-cache.memcached.max-get-multi-concurrency'] +
+              $.store_gateway_args['blocks-storage.bucket-store.metadata-cache.memcached.max-async-concurrency'],
+          }
+        )
     ),
 
   blocks_chunks_caching_config::
@@ -650,11 +673,11 @@
         if $._config.cache_index_queries_backend == 'memcached' then (
           {
             'blocks-storage.bucket-store.index-cache.backend': 'memcached',
-            'blocks-storage.bucket-store.index-cache.memcached.addresses': 'dnssrvnoa+%(cache_index_queries_backend)s-index-queries.%(namespace)s.svc.cluster.local:11211' % $._config,
+            'blocks-storage.bucket-store.index-cache.memcached.addresses': 'dnssrvnoa+%(cache_index_queries_backend)s-index-queries.%(namespace)s.svc.%(cluster_domain)s:11211' % $._config,
             'blocks-storage.bucket-store.index-cache.memcached.max-item-size': $._config.cache_index_queries_max_item_size_mb * 1024 * 1024,
             'blocks-storage.bucket-store.index-cache.memcached.max-async-concurrency': 50,
           } + if $._config.memcached_index_queries_mtls_enabled then {
-            'blocks-storage.bucket-store.index-cache.memcached.addresses': 'dnssrvnoa+%(cache_index_queries_backend)s-index-queries.%(namespace)s.svc.cluster.local:11212' % $._config,
+            'blocks-storage.bucket-store.index-cache.memcached.addresses': 'dnssrvnoa+%(cache_index_queries_backend)s-index-queries.%(namespace)s.svc.%(cluster_domain)s:11212' % $._config,
             'blocks-storage.bucket-store.index-cache.memcached.connect-timeout': '1s',
             'blocks-storage.bucket-store.index-cache.memcached.tls-enabled': true,
             'blocks-storage.bucket-store.index-cache.memcached.tls-ca-path': $._config.memcached_ca_cert_path + $._config.memcached_mtls_ca_cert_secret + '.pem',
@@ -664,7 +687,7 @@
           } else {}
         ) else if $._config.cache_index_queries_backend == 'redis' then {
           'blocks-storage.bucket-store.index-cache.backend': 'redis',
-          'blocks-storage.bucket-store.index-cache.redis.endpoint': '%(cache_index_queries_backend)s-index-queries.%(namespace)s.svc.cluster.local:6379' % $._config,
+          'blocks-storage.bucket-store.index-cache.redis.endpoint': '%(cache_index_queries_backend)s-index-queries.%(namespace)s.svc.%(cluster_domain)s:6379' % $._config,
           'blocks-storage.bucket-store.index-cache.redis.max-item-size': $._config.cache_index_queries_max_item_size_mb * 1024 * 1024,
           'blocks-storage.bucket-store.index-cache.redis.max-async-concurrency': 50,
         } else {}
@@ -674,12 +697,12 @@
         if $._config.cache_chunks_backend == 'memcached' then (
           {
             'blocks-storage.bucket-store.chunks-cache.backend': 'memcached',
-            'blocks-storage.bucket-store.chunks-cache.memcached.addresses': 'dnssrvnoa+%(cache_chunks_backend)s.%(namespace)s.svc.cluster.local:11211' % $._config,
+            'blocks-storage.bucket-store.chunks-cache.memcached.addresses': 'dnssrvnoa+%(cache_chunks_backend)s.%(namespace)s.svc.%(cluster_domain)s:11211' % $._config,
             'blocks-storage.bucket-store.chunks-cache.memcached.max-item-size': $._config.cache_chunks_max_item_size_mb * 1024 * 1024,
             'blocks-storage.bucket-store.chunks-cache.memcached.max-async-concurrency': 50,
             'blocks-storage.bucket-store.chunks-cache.memcached.timeout': '450ms',
           } + if $._config.memcached_chunks_mtls_enabled then {
-            'blocks-storage.bucket-store.chunks-cache.memcached.addresses': 'dnssrvnoa+%(cache_chunks_backend)s.%(namespace)s.svc.cluster.local:11212' % $._config,
+            'blocks-storage.bucket-store.chunks-cache.memcached.addresses': 'dnssrvnoa+%(cache_chunks_backend)s.%(namespace)s.svc.%(cluster_domain)s:11212' % $._config,
             'blocks-storage.bucket-store.chunks-cache.memcached.connect-timeout': '1s',
             'blocks-storage.bucket-store.chunks-cache.memcached.tls-enabled': true,
             'blocks-storage.bucket-store.chunks-cache.memcached.tls-ca-path': $._config.memcached_ca_cert_path + $._config.memcached_mtls_ca_cert_secret + '.pem',
@@ -689,7 +712,7 @@
           } else {}
         ) else if $._config.cache_chunks_backend == 'redis' then {
           'blocks-storage.bucket-store.chunks-cache.backend': 'redis',
-          'blocks-storage.bucket-store.chunks-cache.redis.endpoint': '%(cache_chunks_backend)s.%(namespace)s.svc.cluster.local:6379' % $._config,
+          'blocks-storage.bucket-store.chunks-cache.redis.endpoint': '%(cache_chunks_backend)s.%(namespace)s.svc.%(cluster_domain)s:6379' % $._config,
           'blocks-storage.bucket-store.chunks-cache.redis.max-item-size': $._config.cache_chunks_max_item_size_mb * 1024 * 1024,
           'blocks-storage.bucket-store.chunks-cache.redis.max-async-concurrency': 50,
         } else {}
@@ -702,11 +725,11 @@
         if $._config.cache_metadata_backend == 'memcached' then (
           {
             'blocks-storage.bucket-store.metadata-cache.backend': 'memcached',
-            'blocks-storage.bucket-store.metadata-cache.memcached.addresses': 'dnssrvnoa+%(cache_metadata_backend)s-metadata.%(namespace)s.svc.cluster.local:11211' % $._config,
+            'blocks-storage.bucket-store.metadata-cache.memcached.addresses': 'dnssrvnoa+%(cache_metadata_backend)s-metadata.%(namespace)s.svc.%(cluster_domain)s:11211' % $._config,
             'blocks-storage.bucket-store.metadata-cache.memcached.max-item-size': $._config.cache_metadata_max_item_size_mb * 1024 * 1024,
             'blocks-storage.bucket-store.metadata-cache.memcached.max-async-concurrency': 50,
           } + if $._config.memcached_metadata_mtls_enabled then {
-            'blocks-storage.bucket-store.metadata-cache.memcached.addresses': 'dnssrvnoa+%(cache_metadata_backend)s-metadata.%(namespace)s.svc.cluster.local:11212' % $._config,
+            'blocks-storage.bucket-store.metadata-cache.memcached.addresses': 'dnssrvnoa+%(cache_metadata_backend)s-metadata.%(namespace)s.svc.%(cluster_domain)s:11212' % $._config,
             'blocks-storage.bucket-store.metadata-cache.memcached.connect-timeout': '1s',
             'blocks-storage.bucket-store.metadata-cache.memcached.tls-enabled': true,
             'blocks-storage.bucket-store.metadata-cache.memcached.tls-ca-path': $._config.memcached_ca_cert_path + $._config.memcached_mtls_ca_cert_secret + '.pem',
@@ -716,7 +739,7 @@
           } else {}
         ) else if $._config.cache_metadata_backend == 'redis' then {
           'blocks-storage.bucket-store.metadata-cache.backend': 'redis',
-          'blocks-storage.bucket-store.metadata-cache.redis.endpoint': '%(cache_metadata_backend)s-metadata.%(namespace)s.svc.cluster.local:6379' % $._config,
+          'blocks-storage.bucket-store.metadata-cache.redis.endpoint': '%(cache_metadata_backend)s-metadata.%(namespace)s.svc.%(cluster_domain)s:6379' % $._config,
           'blocks-storage.bucket-store.metadata-cache.redis.max-item-size': $._config.cache_metadata_max_item_size_mb * 1024 * 1024,
           'blocks-storage.bucket-store.metadata-cache.redis.max-async-concurrency': 50,
         } else {}
@@ -729,11 +752,11 @@
         if $._config.cache_metadata_backend == 'memcached' then (
           {
             'ruler-storage.cache.backend': 'memcached',
-            'ruler-storage.cache.memcached.addresses': 'dnssrvnoa+%(cache_metadata_backend)s-metadata.%(namespace)s.svc.cluster.local:11211' % $._config,
+            'ruler-storage.cache.memcached.addresses': 'dnssrvnoa+%(cache_metadata_backend)s-metadata.%(namespace)s.svc.%(cluster_domain)s:11211' % $._config,
             'ruler-storage.cache.memcached.max-item-size': $._config.cache_metadata_max_item_size_mb * 1024 * 1024,
             'ruler-storage.cache.memcached.max-async-concurrency': 50,
           } + if $._config.memcached_metadata_mtls_enabled then {
-            'ruler-storage.cache.memcached.addresses': 'dnssrvnoa+%(cache_metadata_backend)s-metadata.%(namespace)s.svc.cluster.local:11212' % $._config,
+            'ruler-storage.cache.memcached.addresses': 'dnssrvnoa+%(cache_metadata_backend)s-metadata.%(namespace)s.svc.%(cluster_domain)s:11212' % $._config,
             'ruler-storage.cache.memcached.connect-timeout': '1s',
             'ruler-storage.cache.memcached.tls-enabled': true,
             'ruler-storage.cache.memcached.tls-ca-path': $._config.memcached_ca_cert_path + $._config.memcached_mtls_ca_cert_secret + '.pem',
@@ -743,7 +766,7 @@
           } else {}
         ) else if $._config.cache_metadata_backend == 'redis' then {
           'ruler-storage.cache.backend': 'redis',
-          'ruler-storage.cache.redis.endpoint': '%(cache_metadata_backend)s-metadata.%(namespace)s.svc.cluster.local:6379' % $._config,
+          'ruler-storage.cache.redis.endpoint': '%(cache_metadata_backend)s-metadata.%(namespace)s.svc.%(cluster_domain)s:6379' % $._config,
           'ruler-storage.cache.redis.max-item-size': $._config.cache_metadata_max_item_size_mb * 1024 * 1024,
           'ruler-storage.cache.redis.max-async-concurrency': 50,
         } else {}

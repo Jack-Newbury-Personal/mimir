@@ -23,6 +23,7 @@ import (
 	"github.com/go-kit/log"
 	"github.com/gorilla/mux"
 	"github.com/grafana/dskit/test"
+	"github.com/grafana/dskit/user"
 	"github.com/oklog/ulid"
 	"github.com/pkg/errors"
 	"github.com/prometheus/prometheus/model/labels"
@@ -31,7 +32,6 @@ import (
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	"github.com/thanos-io/objstore"
-	"github.com/weaveworks/common/user"
 
 	"github.com/grafana/mimir/pkg/storage/bucket"
 	mimir_tsdb "github.com/grafana/mimir/pkg/storage/tsdb"
@@ -589,7 +589,7 @@ func TestMultitenantCompactor_StartBlockUpload(t *testing.T) {
 			switch {
 			case tc.expInternalServerError:
 				assert.Equal(t, http.StatusInternalServerError, resp.StatusCode)
-				assert.Equal(t, "internal server error\n", string(body))
+				assert.Regexp(t, "internal server error \\(id [0-9a-f]{16}\\)\n", string(body))
 			case tc.expBadRequest != "":
 				assert.Equal(t, http.StatusBadRequest, resp.StatusCode)
 				assert.Equal(t, fmt.Sprintf("%s\n", tc.expBadRequest), string(body))
@@ -1031,7 +1031,7 @@ func TestMultitenantCompactor_UploadBlockFile(t *testing.T) {
 				assert.Equal(t, fmt.Sprintf("%s\n", tc.expNotFound), string(body))
 			case tc.expInternalServerError:
 				assert.Equal(t, http.StatusInternalServerError, resp.StatusCode)
-				assert.Equal(t, "internal server error\n", string(body))
+				assert.Regexp(t, "internal server error \\(id [0-9a-f]{16}\\)\n", string(body))
 			default:
 				assert.Equal(t, http.StatusOK, resp.StatusCode)
 				assert.Empty(t, string(body))
@@ -1322,7 +1322,7 @@ func TestMultitenantCompactor_FinishBlockUpload(t *testing.T) {
 				assert.Equal(t, fmt.Sprintf("%s\n", tc.expNotFound), string(body))
 			case tc.expInternalServerError:
 				assert.Equal(t, http.StatusInternalServerError, resp.StatusCode)
-				assert.Equal(t, "internal server error\n", string(body))
+				assert.Regexp(t, "internal server error \\(id [0-9a-f]{16}\\)\n", string(body))
 			case tc.expTooManyRequests:
 				assert.Equal(t, http.StatusTooManyRequests, resp.StatusCode)
 				assert.Equal(t, "too many block upload validations in progress, limit is 2\n", string(body))
@@ -2011,4 +2011,13 @@ func flipByteAt(t *testing.T, fname string, offset int64) {
 	b[0] = 0xff - b[0]
 	_, err = fd.WriteAt(b[:], offset)
 	require.NoError(t, err)
+}
+
+func TestHexTimeNowNano(t *testing.T) {
+	v := hexTimeNowNano()
+	require.Len(t, v, 16, "Should have exactly 16 characters")
+
+	require.NotEqual(t, strings.Repeat("0", 16), v, "Should not be all zeros")
+	time.Sleep(time.Nanosecond)
+	require.NotEqual(t, v, hexTimeNowNano(), "Should generate a different one.")
 }
