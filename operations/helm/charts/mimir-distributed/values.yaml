@@ -2913,7 +2913,6 @@ metaMonitoring:
         auth:
           # -- Used to set X-Scope-OrgID header on requests. Usually not used in combination with username and password.
           tenantId: ""
-
           # -- Basic authentication username. Optional.
           username: ""
 
