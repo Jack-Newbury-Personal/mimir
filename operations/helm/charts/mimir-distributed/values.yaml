@@ -2898,7 +2898,7 @@ metaMonitoring:
     # -- Controls whether to install the Grafana Agent Operator and its CRDs.
     # Note that helm will not install CRDs if this flag is enabled during an upgrade.
     # In that case install the CRDs manually from https://github.com/grafana/agent/tree/main/production/operator/crds
-    installOperator: false
+    installOperator: true
 
     logs:
       # -- Controls whether to create resources PodLogs and LogsInstance resources
