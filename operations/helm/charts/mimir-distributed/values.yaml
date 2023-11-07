@@ -127,22 +127,13 @@ mimir:
 
     admin_client:
       storage:
-      {{- if .Values.minio.enabled }}
         type: s3
         s3:
-          access_key_id: {{ .Values.minio.rootUser }}
-          bucket_name: enterprise-metrics-admin
-          endpoint: {{ .Release.Name }}-minio.{{ .Release.Namespace }}.svc:9000
+          access_key_id: Wy5Fcy6wgF8KfYSfnWQL
+          bucket_name: minio-admin
+          endpoint: minio.jack-newbury.co.uk
           insecure: true
-          secret_access_key: {{ .Values.minio.rootPassword }}
-      {{- end }}
-      {{- if (index .Values "admin-cache" "enabled") }}
-        cache:
-          backend: memcached
-          memcached:
-            addresses: {{ include "mimir.adminCacheAddress" . }}
-            max_item_size: {{ mul (index .Values "admin-cache").maxItemMemory 1024 1024 }}
-      {{- end }}
+          secret_access_key: 0XSRWCWLIIdZU0RpVcDm3194RsRQFgfbCMUmwd0C
     {{- end }}
 
     alertmanager:
@@ -151,22 +142,20 @@ mimir:
       external_url: /alertmanager
       {{- if .Values.alertmanager.zoneAwareReplication.enabled }}
       sharding_ring:
-        zone_awareness_enabled: true
+        zone_awareness_enabled: false
       {{- end }}
       {{- if .Values.alertmanager.fallbackConfig }}
       fallback_config_file: /configs/alertmanager_fallback_config.yaml
       {{- end }}
 
-    {{- if .Values.minio.enabled }}
     alertmanager_storage:
       backend: s3
       s3:
-        access_key_id: {{ .Values.minio.rootUser }}
-        bucket_name: {{ include "mimir.minioBucketPrefix" . }}-ruler
-        endpoint: {{ .Release.Name }}-minio.{{ .Release.Namespace }}.svc:9000
+        access_key_id: Wy5Fcy6wgF8KfYSfnWQL
+        bucket_name: mimir-ruler
+        endpoint: minio.jack-newbury.co.uk
         insecure: true
-        secret_access_key: {{ .Values.minio.rootPassword }}
-    {{- end }}
+        secret_access_key: 0XSRWCWLIIdZU0RpVcDm3194RsRQFgfbCMUmwd0C
 
     {{- if .Values.enterprise.enabled }}
     auth:
@@ -203,14 +192,12 @@ mimir:
             max_idle_connections: 150
         {{- end }}
         sync_dir: /data/tsdb-sync
-      {{- if .Values.minio.enabled }}
       s3:
-        access_key_id: {{ .Values.minio.rootUser }}
-        bucket_name: {{ include "mimir.minioBucketPrefix" . }}-tsdb
-        endpoint: {{ .Release.Name }}-minio.{{ .Release.Namespace }}.svc:9000
+        access_key_id: Wy5Fcy6wgF8KfYSfnWQL
+        bucket_name: minio-tsdb
+        endpoint: minio.jack-newbury.co.uk
         insecure: true
-        secret_access_key: {{ .Values.minio.rootPassword }}
-      {{- end }}
+        secret_access_key: 0XSRWCWLIIdZU0RpVcDm3194RsRQFgfbCMUmwd0C
       tsdb:
         dir: /data/tsdb
         head_compaction_interval: 15m
@@ -292,7 +279,7 @@ mimir:
         tokens_file_path: /data/tokens
         unregister_on_shutdown: false
         {{- if .Values.ingester.zoneAwareReplication.enabled }}
-        zone_awareness_enabled: true
+        zone_awareness_enabled: false
         {{- end }}
 
     ingester_client:
@@ -341,17 +328,14 @@ mimir:
       enable_api: true
       rule_path: /data
 
-    {{- if or (.Values.minio.enabled) (index .Values "metadata-cache" "enabled") }}
     ruler_storage:
-      {{- if .Values.minio.enabled }}
       backend: s3
       s3:
-        endpoint: {{ .Release.Name }}-minio.{{ .Release.Namespace }}.svc:9000
-        bucket_name: {{ include "mimir.minioBucketPrefix" . }}-ruler
-        access_key_id: {{ .Values.minio.rootUser }}
-        secret_access_key: {{ .Values.minio.rootPassword }}
+        endpoint: minio.jack-newbury.co.uk
+        bucket_name: minio-ruler
+        access_key_id: Wy5Fcy6wgF8KfYSfnWQL
+        secret_access_key: 0XSRWCWLIIdZU0RpVcDm3194RsRQFgfbCMUmwd0C
         insecure: true
-      {{- end }}
       {{- if index .Values "metadata-cache" "enabled" }}
       cache:
         backend: memcached
@@ -359,7 +343,6 @@ mimir:
           addresses: {{ include "mimir.metadataCacheAddress" . }}
           max_item_size: {{ mul (index .Values "metadata-cache").maxItemMemory 1024 1024 }}
       {{- end }}
-    {{- end }}
 
     runtime_config:
       file: /var/{{ include "mimir.name" . }}/runtime.yaml
@@ -380,7 +363,7 @@ mimir:
         tokens_file_path: /data/tokens
         unregister_on_shutdown: false
         {{- if .Values.store_gateway.zoneAwareReplication.enabled }}
-        zone_awareness_enabled: true
+        zone_awareness_enabled: false
         {{- end }}
 
     {{- if and .Values.enterprise.enabled .Values.graphite.enabled }}
@@ -2078,7 +2061,7 @@ rollout_operator:
     allowPrivilegeEscalation: false
 
 minio:
-  enabled: true
+  enabled: false
   mode: standalone
   rootUser: grafana-mimir
   buckets:
