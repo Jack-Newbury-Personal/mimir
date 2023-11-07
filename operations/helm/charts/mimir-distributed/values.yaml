@@ -131,7 +131,7 @@ mimir:
         s3:
           access_key_id: Wy5Fcy6wgF8KfYSfnWQL
           bucket_name: minio-admin
-          endpoint: minio.jack-newbury.co.uk
+          endpoint: minio.svc.minio.cluser.local:9000
           insecure: true
           secret_access_key: 0XSRWCWLIIdZU0RpVcDm3194RsRQFgfbCMUmwd0C
     {{- end }}
@@ -153,7 +153,7 @@ mimir:
       s3:
         access_key_id: Wy5Fcy6wgF8KfYSfnWQL
         bucket_name: mimir-ruler
-        endpoint: minio.jack-newbury.co.uk
+        endpoint: minio.svc.minio.cluser.local:9000
         insecure: true
         secret_access_key: 0XSRWCWLIIdZU0RpVcDm3194RsRQFgfbCMUmwd0C
 
@@ -195,7 +195,7 @@ mimir:
       s3:
         access_key_id: Wy5Fcy6wgF8KfYSfnWQL
         bucket_name: minio-tsdb
-        endpoint: minio.jack-newbury.co.uk
+        endpoint: minio.svc.minio.cluser.local:9000
         insecure: true
         secret_access_key: 0XSRWCWLIIdZU0RpVcDm3194RsRQFgfbCMUmwd0C
       tsdb:
@@ -331,7 +331,7 @@ mimir:
     ruler_storage:
       backend: s3
       s3:
-        endpoint: minio.jack-newbury.co.uk
+        endpoint: minio.svc.minio.cluser.local:9000
         bucket_name: minio-ruler
         access_key_id: Wy5Fcy6wgF8KfYSfnWQL
         secret_access_key: 0XSRWCWLIIdZU0RpVcDm3194RsRQFgfbCMUmwd0C
@@ -2809,7 +2809,7 @@ metaMonitoring:
   # ServiceMonitor configuration for monitoring Kubernetes Services with Prometheus Operator and/or Grafana Agent
   serviceMonitor:
     # -- If enabled, ServiceMonitor resources for Prometheus Operator are created
-    enabled: true
+    enabled: false
     # -- To disable setting a 'cluster' label in metrics, set to 'null'.
     # To overwrite the 'cluster' label with your own value, set to a non-empty string.
     # Keep empty string "" to have the default value in the 'cluster' label, which is the helm release name for Mimir and the actual cluster name for Enterprise Metrics.
@@ -2880,7 +2880,7 @@ metaMonitoring:
     # -- Controls whether to create PodLogs, MetricsInstance, LogsInstance, and GrafanaAgent CRs to scrape the
     # ServiceMonitors of the chart and ship metrics and logs to the remote endpoints below.
     # Note that you need to configure serviceMonitor in order to have some metrics available.
-    enabled: true
+    enabled: false
 
     # -- Controls the image repository and tag for config-reloader and grafana-agent containers in the meta-monitoring
     # StatefulSet and DaemonSet created by the grafana-agent-operator. You can define one or both sections under imageRepo.
