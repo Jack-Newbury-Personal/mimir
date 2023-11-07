@@ -2798,7 +2798,7 @@ metaMonitoring:
   # Dashboard configuration for deploying Grafana dashboards for Mimir
   dashboards:
     # -- If enabled, Grafana dashboards are deployed
-    enabled: false
+    enabled: true
     # -- Annotations to add to the Grafana dashboard ConfigMap
     annotations:
       k8s-sidecar-target-directory: /tmp/dashboards/Mimir Dashboards
@@ -2816,10 +2816,10 @@ metaMonitoring:
     clusterLabel: ""
     # -- Alternative namespace for ServiceMonitor resources
     # If left unset, the default is to install the ServiceMonitor resources in the namespace where the chart is installed, i.e. the namespace specified for the helm command.
-    namespace: null
+    namespace:
     # -- Namespace selector for ServiceMonitor resources
     # If left unset, the default is to select the namespace where the chart is installed, i.e. the namespace specified for the helm command.
-    namespaceSelector: null
+    namespaceSelector:
     # -- ServiceMonitor annotations
     annotations: {}
     # -- Additional ServiceMonitor labels
