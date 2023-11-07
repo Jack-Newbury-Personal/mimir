@@ -2805,7 +2805,6 @@ metaMonitoring:
     # -- Labels to add to the Grafana dashboard ConfigMap
     labels:
       grafana_dashboard: "1"
-
   # ServiceMonitor configuration for monitoring Kubernetes Services with Prometheus Operator and/or Grafana Agent
   serviceMonitor:
     # -- If enabled, ServiceMonitor resources for Prometheus Operator are created
