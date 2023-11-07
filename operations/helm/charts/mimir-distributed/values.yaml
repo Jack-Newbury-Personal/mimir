@@ -2813,13 +2813,13 @@ metaMonitoring:
     # -- To disable setting a 'cluster' label in metrics, set to 'null'.
     # To overwrite the 'cluster' label with your own value, set to a non-empty string.
     # Keep empty string "" to have the default value in the 'cluster' label, which is the helm release name for Mimir and the actual cluster name for Enterprise Metrics.
-    clusterLabel: ""
+    clusterLabel: "mimir"
     # -- Alternative namespace for ServiceMonitor resources
     # If left unset, the default is to install the ServiceMonitor resources in the namespace where the chart is installed, i.e. the namespace specified for the helm command.
-    namespace:
+    namespace: observability
     # -- Namespace selector for ServiceMonitor resources
     # If left unset, the default is to select the namespace where the chart is installed, i.e. the namespace specified for the helm command.
-    namespaceSelector:
+    namespaceSelector: observability
     # -- ServiceMonitor annotations
     annotations: {}
     # -- Additional ServiceMonitor labels
@@ -2988,7 +2988,7 @@ metaMonitoring:
             app.kubernetes.io/name: kube-state-metrics
 
       # -- The scrape interval for all ServiceMonitors.
-      scrapeInterval: 60s
+      scrapeInterval: 15s
 
     # -- Sets the namespace of the resources. Leave empty or unset to use the same namespace as the Helm release.
     namespace: ""
