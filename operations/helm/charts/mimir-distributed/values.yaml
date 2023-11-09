@@ -2901,13 +2901,13 @@ metaMonitoring:
 
     logs:
       # -- Controls whether to create resources PodLogs and LogsInstance resources
-      enabled: false
+      enabled: true
 
       # -- Default destination for logs. The config here is translated to Promtail client
       # configuration to write logs to this Loki-compatible remote. Optional.
       remote:
         # -- Full URL for Loki push endpoint. Usually ends in /loki/api/v1/push
-        url: ""
+        url: "http://loki-write.observability.svc.cluster.local:3100"
 
         auth:
           # -- Used to set X-Scope-OrgID header on requests. Usually not used in combination with username and password.
