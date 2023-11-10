@@ -283,7 +283,7 @@ mimir:
         {{- end }}
       instance_limits:
         max_inflight_push_requests: 0
-        maz_ingestion_rate: 0
+        max_ingestion_rate: 0
 
 
     ingester_client:
@@ -314,7 +314,6 @@ mimir:
       ingestion_rate: 10000000
       ingestion_burst_size: 20000000
       max_global_series_per_user: 0
-      compactor_block_retention_period: 0
       cardinality_analysis_enabled: true
 
     memberlist:
