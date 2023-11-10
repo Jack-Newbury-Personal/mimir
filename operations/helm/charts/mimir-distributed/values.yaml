@@ -310,7 +310,7 @@ mimir:
       # Avoid caching results newer than 10m because some samples can be delayed
       # This presents caching incomplete results
       max_cache_freshness: 10m
-      out_of_order_time_window:43800m
+      out_of_order_time_window: 43800m
       ingestion_rate: 10000000
       ingestion_burst_size: 20000000
       max_global_series_per_user: 0
