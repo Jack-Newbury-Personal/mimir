@@ -281,6 +281,10 @@ mimir:
         {{- if .Values.ingester.zoneAwareReplication.enabled }}
         zone_awareness_enabled: false
         {{- end }}
+      instance_limits:
+        max_inflight_push_requests: 0
+        maz_ingestion_rate: 0
+
 
     ingester_client:
       grpc_client_config:
@@ -306,6 +310,12 @@ mimir:
       # Avoid caching results newer than 10m because some samples can be delayed
       # This presents caching incomplete results
       max_cache_freshness: 10m
+      out_of_order_time_window:43800m
+      ingestion_rate: 10000000
+      ingestion_burst_size: 20000000
+      max_global_series_per_user: 0
+      compactor_block_retention_period: 0
+      cardinality_analysis_enabled: true
 
     memberlist:
       abort_if_cluster_join_fails: false
