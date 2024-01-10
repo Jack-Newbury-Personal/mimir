@@ -129,11 +129,11 @@ mimir:
       storage:
         type: s3
         s3:
-          access_key_id: Wy5Fcy6wgF8KfYSfnWQL
-          bucket_name: minio-admin
+          access_key_id: qxVzbCYB09ooiJ7U346u
+          bucket_name: mimir-admin
           endpoint: minio.minio.svc.cluster.local:9000
           insecure: true
-          secret_access_key: 0XSRWCWLIIdZU0RpVcDm3194RsRQFgfbCMUmwd0C
+          secret_access_key: W2q1dlFVnscQEuZNGyR2mSfssnkYa4dppGqnbKUo
     {{- end }}
 
     alertmanager:
@@ -151,11 +151,11 @@ mimir:
     alertmanager_storage:
       backend: s3
       s3:
-        access_key_id: Wy5Fcy6wgF8KfYSfnWQL
-        bucket_name: minio-ruler
+        access_key_id: qxVzbCYB09ooiJ7U346u
+        bucket_name: mimir-ruler
         endpoint: minio.minio.svc.cluster.local:9000
         insecure: true
-        secret_access_key: 0XSRWCWLIIdZU0RpVcDm3194RsRQFgfbCMUmwd0C
+        secret_access_key: W2q1dlFVnscQEuZNGyR2mSfssnkYa4dppGqnbKUo
 
     {{- if .Values.enterprise.enabled }}
     auth:
@@ -193,11 +193,11 @@ mimir:
         {{- end }}
         sync_dir: /data/tsdb-sync
       s3:
-        access_key_id: Wy5Fcy6wgF8KfYSfnWQL
-        bucket_name: minio-tsdb
+        access_key_id: qxVzbCYB09ooiJ7U346u
+        bucket_name: mimir-tsdb
         endpoint: minio.minio.svc.cluster.local:9000
         insecure: true
-        secret_access_key: 0XSRWCWLIIdZU0RpVcDm3194RsRQFgfbCMUmwd0C
+        secret_access_key: W2q1dlFVnscQEuZNGyR2mSfssnkYa4dppGqnbKUo
       tsdb:
         dir: /data/tsdb
         head_compaction_interval: 15m
@@ -342,9 +342,9 @@ mimir:
       backend: s3
       s3:
         endpoint: minio.minio.svc.cluster.local:9000
-        bucket_name: minio-ruler
-        access_key_id: Wy5Fcy6wgF8KfYSfnWQL
-        secret_access_key: 0XSRWCWLIIdZU0RpVcDm3194RsRQFgfbCMUmwd0C
+        bucket_name: mimir-ruler
+        access_key_id: qxVzbCYB09ooiJ7U346u
+        secret_access_key: W2q1dlFVnscQEuZNGyR2mSfssnkYa4dppGqnbKUo
         insecure: true
       {{- if index .Values "metadata-cache" "enabled" }}
       cache:
