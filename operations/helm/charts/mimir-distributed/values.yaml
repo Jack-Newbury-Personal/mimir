@@ -2917,7 +2917,7 @@ metaMonitoring:
       # configuration to write logs to this Loki-compatible remote. Optional.
       remote:
         # -- Full URL for Loki push endpoint. Usually ends in /loki/api/v1/push
-        url: "http://loki-write.loki.svc.cluster.local:3100/loki/api/v1/push"
+        url: "http://loki-write.observability.svc.cluster.local:3100/loki/api/v1/push"
 
         auth:
           # -- Used to set X-Scope-OrgID header on requests. Usually not used in combination with username and password.
@@ -2968,7 +2968,7 @@ metaMonitoring:
         # -- Full URL for Prometheus remote-write. Usually ends in /push.
         # If you leave the url field empty, then the chart automatically fills in the
         # address of the GEM gateway Service or the Mimir NGINX Service.
-        url: "http://mimir-nginx.mimir.svc.cluster.local/api/v1/push"
+        url: "http://mimir-nginx.observability.svc.cluster.local/api/v1/push"
 
         # -- Used to add HTTP headers to remote-write requests.
         headers: {}
