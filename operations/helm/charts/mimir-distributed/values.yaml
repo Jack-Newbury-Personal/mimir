@@ -547,7 +547,7 @@ alertmanager:
     #   set, choosing the default provisioner.
     #
     # A per-zone storageClass configuration in `alertmanager.zoneAwareReplication.zones[*].storageClass` takes precedence over this field.
-    storageClass: "rook-ceph-block"
+    storageClassName: "rook-ceph-block"
 
   readinessProbe:
     httpGet:
@@ -848,7 +848,7 @@ ingester:
     #
     # A per-zone storageClass configuration in `ingester.zoneAwareReplication.zones[*].storageClass` takes precedence over this field.
     #
-    storageClass: "rook-ceph-block"
+    storageClassName: rook-ceph-block
 
   readinessProbe:
     httpGet:
@@ -1421,7 +1421,7 @@ store_gateway:
     #   set, choosing the default provisioner.
     #
     # A per-zone storageClass configuration in `store_gateway.zoneAwareReplication.zones[*].storageClass` takes precedence over this field.
-    storageClass: "rook-ceph-block"
+    storageClassName: "rook-ceph-block"
 
   readinessProbe:
     httpGet:
@@ -1603,7 +1603,7 @@ compactor:
     # If undefined (the default) or set to null, no storageClassName spec is
     #   set, choosing the default provisioner.
     #
-    storageClass: "rook-ceph-block"
+    storageClassName: "rook-ceph-block"
 
   readinessProbe:
     httpGet:
