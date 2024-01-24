@@ -129,11 +129,11 @@ mimir:
       storage:
         type: s3
         s3:
-          access_key_id: VR8JRES4R062MI02VBIL
+          access_key_id: kAb64qHBdxgWrVeuArwN
           bucket_name: mimir-admin
-          endpoint: rook-ceph-rgw-ceph-s3store.rook-ceph.svc.cluster.local:80
+          endpoint: minio.minio.svc.cluster.local:9000
           insecure: true
-          secret_access_key: 6lHjQIzXyW6WYBr80eey0JoXAhANklSBeGxpHgRY
+          secret_access_key: GvBA63tkNQsnRqD4AhimA5kkGtsYgSenYb3clLR3
     {{- end }}
 
     alertmanager:
@@ -151,11 +151,11 @@ mimir:
     alertmanager_storage:
       backend: s3
       s3:
-        access_key_id: VR8JRES4R062MI02VBIL
+        access_key_id: kAb64qHBdxgWrVeuArwN
         bucket_name: mimir-ruler
-        endpoint: rook-ceph-rgw-ceph-s3store.rook-ceph.svc.cluster.local:80
+        endpoint: minio.minio.svc.cluster.local:9000
         insecure: true
-        secret_access_key: 6lHjQIzXyW6WYBr80eey0JoXAhANklSBeGxpHgRY
+        secret_access_key: GvBA63tkNQsnRqD4AhimA5kkGtsYgSenYb3clLR3
 
     {{- if .Values.enterprise.enabled }}
     auth:
@@ -193,11 +193,11 @@ mimir:
         {{- end }}
         sync_dir: /data/tsdb-sync
       s3:
-        access_key_id: VR8JRES4R062MI02VBIL
+        access_key_id: kAb64qHBdxgWrVeuArwN
         bucket_name: mimir-tsdb
-        endpoint: rook-ceph-rgw-ceph-s3store.rook-ceph.svc.cluster.local:80
+        endpoint: minio.minio.svc.cluster.local:9000
         insecure: true
-        secret_access_key: 6lHjQIzXyW6WYBr80eey0JoXAhANklSBeGxpHgRY
+        secret_access_key: GvBA63tkNQsnRqD4AhimA5kkGtsYgSenYb3clLR3
       tsdb:
         dir: /data/tsdb
         head_compaction_interval: 15m
@@ -341,10 +341,10 @@ mimir:
     ruler_storage:
       backend: s3
       s3:
-        endpoint: rook-ceph-rgw-ceph-s3store.rook-ceph.svc.cluster.local:80
+        endpoint: minio.minio.svc.cluster.local:9000
         bucket_name: mimir-ruler
-        access_key_id: VR8JRES4R062MI02VBIL
-        secret_access_key: 6lHjQIzXyW6WYBr80eey0JoXAhANklSBeGxpHgRY
+        access_key_id: kAb64qHBdxgWrVeuArwN
+        secret_access_key: GvBA63tkNQsnRqD4AhimA5kkGtsYgSenYb3clLR3
         insecure: true
       {{- if index .Values "metadata-cache" "enabled" }}
       cache:
