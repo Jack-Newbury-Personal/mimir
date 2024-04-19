@@ -282,6 +282,7 @@ mimir:
         zone_awareness_enabled: false
         {{- end }}
         replication_factor: 1
+      autoforget_unhealthy: true
       instance_limits:
         max_inflight_push_requests: 0
         max_ingestion_rate: 0
@@ -1692,7 +1693,7 @@ chunks-cache:
   enabled: true
 
   # -- Total number of chunks-cache replicas
-  replicas: 2
+  replicas: 1
 
   # -- Port of the chunks-cache service
   port: 11211
@@ -1781,7 +1782,7 @@ index-cache:
   enabled: true
 
   # -- Total number of index-cache replicas
-  replicas: 2
+  replicas: 1
 
   # -- Port of the index-cache service
   port: 11211
@@ -1870,7 +1871,7 @@ metadata-cache:
   enabled: true
 
   # -- Total number of metadata-cache replicas
-  replicas: 2
+  replicas: 1
 
   # -- Port of the metadata-cache service
   port: 11211
@@ -1959,7 +1960,7 @@ results-cache:
   enabled: true
 
   # -- Total number of results-cache replicas
-  replicas: 2
+  replicas: 1
 
   # -- Port of the results-cache service
   port: 11211
