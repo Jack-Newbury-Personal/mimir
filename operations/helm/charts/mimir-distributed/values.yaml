@@ -282,7 +282,6 @@ mimir:
         zone_awareness_enabled: false
         {{- end }}
         replication_factor: 1
-      autoforget_unhealthy: true
       instance_limits:
         max_inflight_push_requests: 0
         max_ingestion_rate: 0
