@@ -1689,10 +1689,10 @@ memcachedExporter:
 
 chunks-cache:
   # -- Specifies whether memcached based chunks-cache should be enabled
-  enabled: false
+  enabled: true
 
   # -- Total number of chunks-cache replicas
-  replicas: 1
+  replicas: 2
 
   # -- Port of the chunks-cache service
   port: 11211
@@ -1778,10 +1778,10 @@ chunks-cache:
 
 index-cache:
   # -- Specifies whether memcached based index-cache should be enabled
-  enabled: false
+  enabled: true
 
   # -- Total number of index-cache replicas
-  replicas: 1
+  replicas: 2
 
   # -- Port of the index-cache service
   port: 11211
@@ -1867,10 +1867,10 @@ index-cache:
 
 metadata-cache:
   # -- Specifies whether memcached based metadata-cache should be enabled
-  enabled: false
+  enabled: true
 
   # -- Total number of metadata-cache replicas
-  replicas: 1
+  replicas: 2
 
   # -- Port of the metadata-cache service
   port: 11211
@@ -1956,10 +1956,10 @@ metadata-cache:
 
 results-cache:
   # -- Specifies whether memcached based results-cache should be enabled
-  enabled: false
+  enabled: true
 
   # -- Total number of results-cache replicas
-  replicas: 1
+  replicas: 2
 
   # -- Port of the results-cache service
   port: 11211
@@ -2100,8 +2100,8 @@ minio:
   # Changed the mc config path to '/tmp' from '/etc' as '/etc' is only writable by root and OpenShift will not permit this.
   configPathmc: "/tmp/minio/mc/"
   makeBucketJob:
-    Annotations: { sidecar.istio.io/inject: "false" }
-    podAnnotations: { sidecar.istio.io/inject: "false" }
+    Annotations: {sidecar.istio.io/inject: "false"}
+    podAnnotations: {sidecar.istio.io/inject: "false"}
 
 # -- DEPRECATED: use the 'gateway' section instead. For a migration guide refer to
 # https://grafana.com/docs/helm-charts/mimir-distributed/latest/migration-guides/migrate-to-unified-proxy-deployment/
